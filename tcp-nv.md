@@ -11,46 +11,46 @@
   <td>TCP New Vegas</td>
 </tr>
 <tr>
-  <td>`.init`</td>
+  <td>.init</td>
   <td>To initialize private data</td>
-  <td>`vegas_init`</td>
-  <td>`tcpnv_init`</td>
+  <td>vegas_init</td>
+  <td>tcpnv_init</td>
 </tr>
 <tr>
-  <td>`.pkts_acked`</td>
+  <td>.pkts_acked</td>
   <td>Hook for packet ack accounting</td>
-  <td>`tcp_vegas_pkts_acked`</td>
-  <td>`tcpnv_acked`</td>
+  <td>tcp_vegas_pkts_acked</td>
+  <td>tcpnv_acked</td>
 </tr>
 <tr>
-  <td>`.set_state`</td>
+  <td>.set_state</td>
   <td>Call before changing ca_state</td>
-  <td>`tcp_vegas_state`</td>
-  <td>`tcpnv_state`</td>
+  <td>tcp_vegas_state</td>
+  <td>tcpnv_state</td>
 </tr>
 <tr>
-  <td>`.ssthresh`</td>
+  <td>.ssthresh</td>
   <td>Returns the slow start threshold</td>
-  <td>`tcp_reno_ssthresh`</td>
-  <td>`tcpnv_recalc_ssthresh`</td>
+  <td>tcp_reno_ssthresh</td>
+  <td>tcpnv_recalc_ssthresh</td>
 </tr>
 <tr>
-  <td>`.cwnd_event`</td>
+  <td>.cwnd_event</td>
   <td>Function for when cwnd event occurs</td>
-  <td>`tcp_vegas_cwnd_event`</td>
+  <td>tcp_vegas_cwnd_event</td>
   <td> - </td>
 </tr>
 <tr>
-  <td>`.cong_avoid`</td>
+  <td>.cong_avoid</td>
   <td>New cwnd calculation</td>
-  <td>`tcp_vegas_cong_avoid`</td>
-  <td>`tcpnv_cong_avoid`</td>
+  <td>tcp_vegas_cong_avoid</td>
+  <td>tcpnv_cong_avoid</td>
 </tr>
 <tr>
-  <td>`.undo_cwnd`</td>
+  <td>.undo_cwnd</td>
   <td>New value of cwnd after loss</td>
-  <td>`tcp_reno_undo_cwnd`</td>
-  <td>`tcp_reno_undo_cwnd`</td>
+  <td>tcp_reno_undo_cwnd</td>
+  <td>tcp_reno_undo_cwnd</td>
 </tr>
 </table>
 
