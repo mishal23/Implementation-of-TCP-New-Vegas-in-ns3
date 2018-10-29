@@ -47,14 +47,56 @@ event) or **Recovery** (Fast Retransmit Stage):
 - Increment `nv_eval_call_cnt` if its less than 255
 - We apply `nv_get_bounded_rtt` function that returns the min of `nv_lower_bound_rtt`,`nv_base_rtt` and `avg_rtt` and `avg_rtt` is set to that
 - Update `nv_min_rtt` and `nv_min_rtt_new` if necessary
-- *Jiffies part not clear*
+- if now > `nv_min_rtt_reset_jiffies`
+  - `nv_min_rtt` = `nv_min_rtt_new`
+  - `nv_min_rtt_new` = `infinity`
+  - `nv_min_rtt_reset_jiffies` = now + (`nv_reset_period` * (384+rand) * HZ)>>9
+  - `nv_min_cwnd` = max(`nv_min_cwnd`/2,4)
 - if `nv_rtt_start_seq` - `snd_una` is positive then: 
-    - update nv_rtt_start_seq as snd_nxt
-    - increment nv_rtt_cnt if required
-    - if `nv_eval_call_cnt` = 1 AND bytes_acked >= (`nv_min_cwnd` - 1) * `mss_cache` AND `nv_min_cwnd` < 81 (`NV_TSO_CWND_BOUND` + 1):
+    - update `nv_rtt_start_seq` as `snd_nxt`
+    - increment `nv_rtt_cnt` if required
+    - if `nv_eval_call_cnt` = 1 AND bytes_acked >= (`nv_min_cwnd` - 1) * `mss_cache` AND `nv_min_cwnd` < 81 :
         - `nv_min_cwnd` = min(`nv_min_cwnd` + 2 , 81 )
         - `nv_rtt_start_ses` = `snd_next` + `nv_min_cwnd` * `mss_cache`
         - `nv_eval_call_cnt` = 0
         - `nv_allow_cwnd_growth` = 1
+-  slope = 80000 * `mss_cache` / `nv_min_rtt`
+- cwnd_by_slope = `nv_rtt_max_rate`/slope
+-  max_win = cwnd_by_slope + `nv_pad`
+- if `snd_cwnd` > max_win :
+  - if `nv_rtt_cnt` < `nv_rtt_min_cnt` return
+  - else if `ssthresh` = infinity
+         - if `nv_eval_call_cnt` < `nv_ssthresh_eval_min_calls` return 
+  - else if `nv_eval_call_cnt` < `nv_dec_eval_min_call`
+         - if `nv_allow_cwnd_growth` AND `nv_rtt_cnt` > `nv_stop_rtt_cnt` 
+            - `nv_allow_cwnd_growth` = 0 return
+  - `nv_allow_cwnd_growth` = 0
+  - `snd_ssthresh` = (`nv_ssthresh_factor` * max_win) >> 3
+  - if (`snd_cwnd` - max_win) > 2
+      - dec = max(2U, ((`snd_cwnd` - max_win) * `nv_cong_dec_mult`)>>7
+      - `snd_cwnd` = dec
+  - else if (`nv_cong_dec_mult` > 0)
+      - `snd_cwnd` = max_win
+      - if `cwnd_growth_facto`r > 0 then `cwnd_growth_factor` = 0
+      - `nv_no_cong_cnt` = 0
+- else if `snd_cwnd` < max_win - `nv_pad_buffer`
+   - if `nv_eval_call_cnt` < `nv_inc_eval_min_calls` then return
+   - `nv_allow_cwnd_growth` = 1
+   - increment `nv_no_cong_cnt`
+   - if `cwnd_growth_factor` < 0 AND `nv_cwnd_growth_rate_neg` > 0 AND `nv_no_cong_cnt` > `nv_cwnd_growth_rate_neg`
+        - increment `cwnd_growth_factor`
+        - `nv_no_cong_cnt` = 0
+   - else if `cwnd_growth_factor` >=0 AND `nv_cwnd_growth_rate_pos` > 0 AND `nv_no_cong_cnt` > `nv_cwnd_growth_rate_pos`
+        - increment `cwnd_growth_factor`
+        - `nv_no_cong_cnt` = 0
+- else
+   - don't do anything return
+- `nv_eval_call_cnt` = 0
+- `nv_rtt_cnt` = 0
+- `nv_rtt_max_rate` = 0
+- if `snd_cwnd` < `nv_min_cwnd`
+    - `snd_cwnd` = `nv_min_cwnd`
+
+
         
    
