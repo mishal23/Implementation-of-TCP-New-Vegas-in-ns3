@@ -49,12 +49,12 @@ event) or **Recovery** (Fast Retransmit Stage):
 - Update `nv_min_rtt` and `nv_min_rtt_new` if necessary
 - *Jiffies part not clear*
 - if `nv_rtt_start_seq` - `snd_una` is positive then: 
-    -update nv_rtt_start_seq as snd_nxt
-    -increment nv_rtt_cnt if required
-    -if `nv_eval_call_cnt` = 1 AND bytes_acked >= (`nv_min_cwnd` - 1) * `mss_cache` AND `nv_min_cwnd` < 81 (`NV_TSO_CWND_BOUND` + 1):
-        -`nv_min_cwnd` = min(`nv_min_cwnd` + 2 , 81 )
-        -`nv_rtt_start_ses` = `snd_next` + `nv_min_cwnd` * `mss_cache`
-        -`nv_eval_call_cnt` = 0
-        -`nv_allow_cwnd_growth` = 1
+    - update nv_rtt_start_seq as snd_nxt
+    - increment nv_rtt_cnt if required
+    - if `nv_eval_call_cnt` = 1 AND bytes_acked >= (`nv_min_cwnd` - 1) * `mss_cache` AND `nv_min_cwnd` < 81 (`NV_TSO_CWND_BOUND` + 1):
+        - `nv_min_cwnd` = min(`nv_min_cwnd` + 2 , 81 )
+        - `nv_rtt_start_ses` = `snd_next` + `nv_min_cwnd` * `mss_cache`
+        - `nv_eval_call_cnt` = 0
+        - `nv_allow_cwnd_growth` = 1
         
    
