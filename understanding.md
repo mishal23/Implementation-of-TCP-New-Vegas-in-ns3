@@ -66,7 +66,7 @@ event) or **Recovery** (Fast Retransmit Stage):
 - if `snd_cwnd` > max_win :
   - if `nv_rtt_cnt` < `nv_rtt_min_cnt` return
   - else if `ssthresh` = infinity
-         - if `nv_eval_call_cnt` < `nv_ssthresh_eval_min_calls` return 
+           - if `nv_eval_call_cnt` < `nv_ssthresh_eval_min_calls` return 
   - else if `nv_eval_call_cnt` < `nv_dec_eval_min_call`
          - if `nv_allow_cwnd_growth` AND `nv_rtt_cnt` > `nv_stop_rtt_cnt` 
             - `nv_allow_cwnd_growth` = 0 return
