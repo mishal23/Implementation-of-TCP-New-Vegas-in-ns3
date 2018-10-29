@@ -67,11 +67,11 @@ event) or **Recovery** (Fast Retransmit Stage):
 -  max_win = cwnd_by_slope + `nv_pad`
 - If cwnd > max_win, decrease cwnd if cwnd < max_win, grow cwnd else leave the same
 - if `snd_cwnd` > max_win :
--  CA decision can be made when
-     - We should have at least nv_dec_eval_min_calls data points before making a CA  decision
-		 - We only make a congesion decision after nv_rtt_min_cnt RTTs
-  - if `nv_rtt_cnt` < `nv_rtt_min_cnt` return
-  - else if `ssthresh` = infinity
+     -  CA decision can be made when
+        - We should have at least nv_dec_eval_min_calls data points before making a CA  decision
+        - We only make a congesion decision after nv_rtt_min_cnt RTTs
+     - if `nv_rtt_cnt` < `nv_rtt_min_cnt` return
+     - else if `ssthresh` = infinity
            - if `nv_eval_call_cnt` < `nv_ssthresh_eval_min_calls` return 
   - else if `nv_eval_call_cnt` < `nv_dec_eval_min_call`
          - if `nv_allow_cwnd_growth` AND `nv_rtt_cnt` > `nv_stop_rtt_cnt` 
