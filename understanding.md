@@ -44,5 +44,6 @@ event) or **Recovery** (Fast Retransmit Stage):
 - if `avg_rtt` > 0, then rate64 = rate64/`avg_rtt`
 - if `avg_rtt` = 0, then rate64 remains unaltered
 - Update `nv_rtt_max_rate` = rate
+- Increment `nv_eval_call_cnt` if its less than 255
 - We apply bounds to RTT, and update the `nv_min_rtt` and `nv_min_rtt_new` if necessary
 - *To be updated*
