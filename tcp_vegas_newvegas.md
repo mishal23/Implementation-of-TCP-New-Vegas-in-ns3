@@ -168,6 +168,7 @@ event) or **Recovery** (Fast Retransmit Stage):
 - ser `vegas->cntRTT` : `vegas->cntRTT` + 1
 
 #### TCP New Vegas
+
 - If some timestamp is missing for a sample(`bytes`, `pkts_acked`, `rtt`), than we return
 - If TCP is in Loss State or CWR State or Recovery State, then return
 - If we are catching CWND(whether we are growing because of temporary cwnd decrease) and `snd_cwnd` > 2, then set catchup to 0, and do not allow growth
@@ -186,15 +187,14 @@ event) or **Recovery** (Fast Retransmit Stage):
   - `nv_min_rtt_new` = `infinity`
   - `nv_min_rtt_reset_jiffies` = now + (`nv_reset_period` * (384+rand) * HZ)>>9  In practice we introduce some randomness
   - `nv_min_cwnd` = max(`nv_min_cwnd`/2,4)
-
 - if `nv_rtt_start_seq` - `snd_una` is positive then: Once every RTT check if CA needs to be done
     - update `nv_rtt_start_seq` as `snd_nxt`
     - increment `nv_rtt_cnt` if required without CA decision
     - if `nv_eval_call_cnt` = 1 AND bytes_acked >= (`nv_min_cwnd` - 1) * `mss_cache` AND `nv_min_cwnd` < 81 :
-        - `nv_min_cwnd` = min(`nv_min_cwnd` + 2 , 81 )
-        - `nv_rtt_start_ses` = `snd_next` + `nv_min_cwnd` * `mss_cache`
-        - `nv_eval_call_cnt` = 0
-        - `nv_allow_cwnd_growth` = 1
+     - `nv_min_cwnd` = min(`nv_min_cwnd` + 2 , 81 )
+     - `nv_rtt_start_ses` = `snd_next` + `nv_min_cwnd` * `mss_cache`
+     - `nv_eval_call_cnt` = 0
+     - `nv_allow_cwnd_growth` = 1
     - if above function is called once within a RTT cwnd is small hence need to inc nv_min_cwnd
 -  slope = 80000 * `mss_cache` / `nv_min_rtt`
 - cwnd_by_slope = `nv_rtt_max_rate`/slope
@@ -202,11 +202,11 @@ event) or **Recovery** (Fast Retransmit Stage):
 - If cwnd > max_win, decrease cwnd if cwnd < max_win, grow cwnd else leave the same
 - if `snd_cwnd` > max_win :
      -  CA decision can be made when
-        - We should have at least nv_dec_eval_min_calls data points before making a CA  decision
-        - We only make a congesion decision after nv_rtt_min_cnt RTTs
+       - We should have at least nv_dec_eval_min_calls data points before making a CA  decision
+       - We only make a congesion decision after nv_rtt_min_cnt RTTs
      - if `nv_rtt_cnt` < `nv_rtt_min_cnt` return
      - else if `ssthresh` = infinity
-           - if `nv_eval_call_cnt` < `nv_ssthresh_eval_min_calls` return
+      - if `nv_eval_call_cnt` < `nv_ssthresh_eval_min_calls` return
   - else if `nv_eval_call_cnt` < `nv_dec_eval_min_call`
          - if `nv_allow_cwnd_growth` AND `nv_rtt_cnt` > `nv_stop_rtt_cnt`
             - `nv_allow_cwnd_growth` = 0 return
@@ -214,23 +214,23 @@ event) or **Recovery** (Fast Retransmit Stage):
   - `nv_allow_cwnd_growth` = 0
   - `snd_ssthresh` = (`nv_ssthresh_factor` * max_win) >> 3
   - if (`snd_cwnd` - max_win) > 2
-      - dec = max(2U, ((`snd_cwnd` - max_win) * `nv_cong_dec_mult`)>>7
-      - `snd_cwnd` = dec
+   - dec = max(2U, ((`snd_cwnd` - max_win) * `nv_cong_dec_mult`)>>7
+   - `snd_cwnd` = dec
   - else if (`nv_cong_dec_mult` > 0)
-      - `snd_cwnd` = max_win
-      - if `cwnd_growth_facto`r > 0 then `cwnd_growth_factor` = 0
-      - `nv_no_cong_cnt` = 0
+   - `snd_cwnd` = max_win
+   - if `cwnd_growth_facto`r > 0 then `cwnd_growth_factor` = 0
+   - `nv_no_cong_cnt` = 0
 - else if `snd_cwnd` < max_win - `nv_pad_buffer`
    - There is no congestion, grow cwnd if allowed
    - if `nv_eval_call_cnt` < `nv_inc_eval_min_calls` then return
    - `nv_allow_cwnd_growth` = 1
    - increment `nv_no_cong_cnt`
    - if `cwnd_growth_factor` < 0 AND `nv_cwnd_growth_rate_neg` > 0 AND `nv_no_cong_cnt` > `nv_cwnd_growth_rate_neg`
-        - increment `cwnd_growth_factor`
-        - `nv_no_cong_cnt` = 0
+    - increment `cwnd_growth_factor`
+    - `nv_no_cong_cnt` = 0
    - else if `cwnd_growth_factor` >=0 AND `nv_cwnd_growth_rate_pos` > 0 AND `nv_no_cong_cnt` > `nv_cwnd_growth_rate_pos`
-        - increment `cwnd_growth_factor`
-        - `nv_no_cong_cnt` = 0
+    - increment `cwnd_growth_factor`
+    - `nv_no_cong_cnt` = 0
 - else
    - cwnd is in-between
    - don't do anything return
