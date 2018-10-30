@@ -1,12 +1,51 @@
 # TCP New Vegas
 
-## Initilization
-#### TCP NV:
+## Functions
+<table>
+<tr>
+  <td>Function</td>
+  <td>Description</td>
+  <td>TCP New Vegas</td>
+</tr>
+<tr>
+  <td>.init</td>
+  <td>To initialize private data</td>
+  <td>tcpnv_init</td>
+</tr>
+<tr>
+  <td>.pkts_acked</td>
+  <td>Hook for packet ack accounting</td>
+  <td>tcpnv_acked</td>
+</tr>
+<tr>
+  <td>.set_state</td>
+  <td>Call before changing ca_state</td>
+  <td>tcpnv_state</td>
+</tr>
+<tr>
+  <td>.ssthresh</td>
+  <td>Returns the slow start threshold</td>
+  <td>tcpnv_recalc_ssthresh</td>
+</tr>
+<tr>
+  <td>.cong_avoid</td>
+  <td>New cwnd calculation</td>
+  <td>tcpnv_cong_avoid</td>
+</tr>
+<tr>
+  <td>.undo_cwnd</td>
+  <td>New value of cwnd after loss</td>
+  <td>tcp_reno_undo_cwnd</td>
+</tr>
+</table>
+
+## Understanding
+#### Initilization `.init`
 - To set the value of base_rtt, it calls `tcp_call_bpf`, TCP BPF is a new mechanism that supports setting TCP parameters [paper here](https://netdevconf.org/2.2/papers/brakmo-tcpbpf-talk.pdf)
 - TCP NV is meant to be used in environments, such as communication within datacenters, where we'll have reasonable RTTs
 - Initialize `nv_allow_cwnd_growth`(1), `nv_min_rtt_reset_jiffies`(), `nv_min_rtt` (INT_MAX), `nv_min_rtt_new`(INT_MAX), `nv_min_cwnd`(4), `nv_catchup` (0), `cwnd_growth_factor` (0)
 
-#### New cwnd calculation
+#### New cwnd calculation `cong_avoid`
 - In slow start we allow cwnd to grow as long as the application has used half the cwnd.(ensure that cwnd grows twice what was ACKED)
 - Allow to grow only if it has not detected congestion.
 - If we are in slow start phase, we check for the leftover acknowledgements after slow start exits to adjust cwnd in congestion avoidance mode, if there aren't any acknowledgements, we return.
@@ -17,12 +56,12 @@
   - set cnt : max(4U, `snd_cwnd` >> `cwnd_growth_factor`)
   - and we perform congestion avoidance additive inverse.
 
-#### Slow Start Threshold
+#### Slow Start Threshold `.ssthresh`
 - Return maximum of (`snd_cwnd`\ `nv_loss_dec_factor`)>>10, 2U)
 - Equivalent to Reno, works well when network is so congested that NV cannot
 prevent many losses.
 
-#### Set state (Called before changing ca_state)
+#### Set state (Called before changing ca_state) `.set_state`
 - If the connection is open and `nv_reset`, reset.
 - Else if **Loss state**(congestion window was reduced due to
 RTO timeout) or **CWR** (handle some Congestion Notification
@@ -33,7 +72,7 @@ event) or **Recovery** (Fast Retransmit Stage):
       - if `cwnd_growth_factor`>0, set `cwnd_growth_factor` : 0 **[Reno Value]**
       - if `nv_cwnd_growth_rate_neg`>0 & `cwnd_growth_factor`>-8, decrease `cwnd_growth_factor` by 1
 
-#### Packets acked
+#### Packets acked `pkts_acked`
 - If some timestamp is missing for a sample(`bytes`, `pkts_acked`, `rtt`), than we return
 - If TCP is in Loss State or CWR State or Recovery State, then return
 - If we are catching CWND(whether we are growing because of temporary cwnd decrease) and `snd_cwnd` > 2, then set catchup to 0, and do not allow growth
@@ -52,7 +91,7 @@ event) or **Recovery** (Fast Retransmit Stage):
   - `nv_min_rtt_new` = `infinity`
   - `nv_min_rtt_reset_jiffies` = now + (`nv_reset_period` * (384+rand) * HZ)>>9  In practice we introduce some randomness
   - `nv_min_cwnd` = max(`nv_min_cwnd`/2,4)
-  
+
 - if `nv_rtt_start_seq` - `snd_una` is positive then: Once every RTT check if CA needs to be done
     - update `nv_rtt_start_seq` as `snd_nxt`
     - increment `nv_rtt_cnt` if required without CA decision
@@ -72,9 +111,9 @@ event) or **Recovery** (Fast Retransmit Stage):
         - We only make a congesion decision after nv_rtt_min_cnt RTTs
      - if `nv_rtt_cnt` < `nv_rtt_min_cnt` return
      - else if `ssthresh` = infinity
-           - if `nv_eval_call_cnt` < `nv_ssthresh_eval_min_calls` return 
+           - if `nv_eval_call_cnt` < `nv_ssthresh_eval_min_calls` return
   - else if `nv_eval_call_cnt` < `nv_dec_eval_min_call`
-         - if `nv_allow_cwnd_growth` AND `nv_rtt_cnt` > `nv_stop_rtt_cnt` 
+         - if `nv_allow_cwnd_growth` AND `nv_rtt_cnt` > `nv_stop_rtt_cnt`
             - `nv_allow_cwnd_growth` = 0 return
   - We have enough data to determine we are congested
   - `nv_allow_cwnd_growth` = 0
@@ -107,7 +146,3 @@ event) or **Recovery** (Fast Retransmit Stage):
 - We don't want to make cwnd < min_cwnd, if it is then update
 - if `snd_cwnd` < `nv_min_cwnd`
     - `snd_cwnd` = `nv_min_cwnd`
-
-
-        
-   
