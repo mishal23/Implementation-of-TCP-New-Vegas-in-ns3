@@ -11,6 +11,9 @@ class TcpNewVegas : public TcpNewReno
 {
 public:
 	//
+	static TypeId GetTypeId (void);
+
+	//
 	TcpNewVegas (void);
 
 	// Init (tcpnv_init)
@@ -39,10 +42,16 @@ protected:
 
 private:
 
+	// Macro Parameters
+	Time m_InitRtt;
+    double m_MinCwndNv;
+    double m_MinCwndGrow;  
+    double m_TsoCwndBound; 
+
 	// User Parameters
 	uint32_t m_Pad;
 	uint32_t m_PadBuffer;
-	uint32_t m_ResetPeriod;
+	Time m_ResetPeriod;
 	uint32_t m_MinCwnd;
 	uint32_t m_CongDecMult;
 	uint32_t m_SsThreshFactor;
@@ -57,7 +66,23 @@ private:
 	uint32_t m_RttMinCnt;
 
 	// TcpNV Parameters
-	// int64x64_t m_MinRttResetJiffies;
+	uint64_t m_MinRttResetJiffies;
+	uint32_t m_CwndGrowthFactor;
+	bool m_NvAllowCwndGrowth;
+	bool m_NvReset;
+	bool m_NvCatchup;
+	uint8_t m_EvalCallCount;
+	uint8_t m_NvMinCwnd;
+	uint8_t m_RttCount;
+    Time m_LastRtt;	
+	Time m_MinRtt;		
+	uint32_t m_MinRttNew;	
+	Time m_BaseRtt;        
+	Time m_LowerBoundRtt; 
+	uint32_t m_RttMaxRate;	
+	uint32_t m_RttStartSeq;	
+	uint32_t m_LastSndUna;
+    uint32_t m_NoCongCnt; 
 	
 };
 }
