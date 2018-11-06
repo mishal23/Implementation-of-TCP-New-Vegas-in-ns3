@@ -26,7 +26,7 @@ public:
 	virtual std::string GetName () const;
 
 	// Hook for packet ack accounting (tcpnv_acked)
-	virtual void PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, const Time& rtt);
+	virtual void PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,uint32_t bytesInFlight, const Time& rtt);
 
 	// Call before changing ca_state (tcpnv_state)
 	virtual void CongestionStateSet (Ptr<TcpSocketState> tcb, const TcpSocketState::TcpCongState_t newState);
@@ -76,12 +76,12 @@ private:
 	uint8_t m_RttCount;
     Time m_LastRtt;	
 	Time m_MinRtt;		
-	uint32_t m_MinRttNew;	
+	Time m_MinRttNew;	
 	Time m_BaseRtt;        
 	Time m_LowerBoundRtt; 
 	uint32_t m_RttMaxRate;	
-	uint32_t m_RttStartSeq;	
-	uint32_t m_LastSndUna;
+	SequenceNumber32 m_RttStartSeq;	
+	SequenceNumber32 m_LastSndUna;
     uint32_t m_NoCongCnt; 
 	
 };
