@@ -37,33 +37,44 @@ TcpNewVegas::GetTypeId (void)
 }
 
 TcpNewVegas::TcpNewVegas (void)
-	: TcpNewReno ()
-	// m_Pad (10),
-	// m_PadBuffer (2),
-	// m_ResetPeriod (5),
-	// m_MinCwnd (2),
-	// m_CongDecMult (30*128/100),
-	// m_SsThreshFactor (8),
-	// m_RttFactor (128),
-	// m_LossDecFactor (819),
-	// m_CwndGrowthRateNeg (8),
-	// m_CwndGrowthRatePos (0),
-	// m_DecEvalMinCalls (60),
-	// m_IncEvalMinCalls (20),
-	// m_SsThreshEvalMinCalls (30),
-	// m_StopRttCnt (10),
-	// m_RttMinCnt (2),
-	// m_InitRtt (Time::Max ()),
-	// m_MinCwndNv (4),
-	// m_MinCwndGrow (2),
-	// m_TsoCwndBound (80)
-
-	// m_NvAllowCwndGrowth (1),
-	// m_MinRttResetJiffies (),
-	// m_MinRtt (Time::Max()),
-	// m_MinRttNew (Time::Max()),
-	// m_NvCatchup (0),
-	// m_CwndGrowthFactor (0)
+	: TcpNewReno (),
+  m_InitRtt (Time::Max ()),
+	m_MinCwndNv (4),
+	m_MinCwndGrow (2),
+	m_TsoCwndBound (80),
+	m_Pad (10),
+	m_PadBuffer (2),
+	m_ResetPeriod (5),
+	m_MinCwnd (2),
+	m_CongDecMult (30*128/100),
+	m_SsThreshFactor (8),
+	m_RttFactor (128),
+	m_LossDecFactor (819),
+	m_CwndGrowthRateNeg (8),  
+	m_CwndGrowthRatePos (0),
+	m_DecEvalMinCalls (60),
+	m_IncEvalMinCalls (20),
+	m_SsThreshEvalMinCalls (30),
+	m_StopRttCnt (10),
+	m_RttMinCnt (2),
+	
+	m_MinRttResetJiffies (),
+  m_CwndGrowthFactor(0),
+  m_NvAllowCwndGrowth (1),
+  m_NvReset(0),
+  m_NvCatchup(0),
+  m_EvalCallCount(0),
+  m_NvMinCwnd(m_MinCwndNv),
+	m_RttCount(0),
+  m_LastRtt(0),
+	m_MinRtt (Time::Max()),
+	m_MinRttNew (Time::Max()),
+  m_BaseRtt(),        
+	m_LowerBoundRtt(), 
+	m_RttMaxRate(0),
+	m_RttStartSeq(),
+	m_LastSndUna(),
+  m_NoCongCnt(0)
 
 {
 	NS_LOG_FUNCTION (this);
@@ -119,6 +130,10 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, uint32_
 	/*if (icsk->icsk_ca_state != TCP_CA_Open &&
 	    icsk->icsk_ca_state != TCP_CA_Disorder)
 		return;*/
+
+  if(tcb->m_congState != TcpSocketState::CA_OPEN && 
+              tcb->m_congState!=TcpSocketState::CA_DISORDER)
+      return;
 
 	
 	if (m_NvCatchup && segCwnd >= m_MinCwnd) {
