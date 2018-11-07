@@ -32,14 +32,38 @@ TcpNewVegas::GetTypeId (void)
                    MakeUintegerChecker<uint32_t> ())
     
   ;
-return tid;
-
 
 	return tid;
 }
 
 TcpNewVegas::TcpNewVegas (void)
 	: TcpNewReno ()
+	// m_Pad (10),
+	// m_PadBuffer (2),
+	// m_ResetPeriod (5),
+	// m_MinCwnd (2),
+	// m_CongDecMult (30*128/100),
+	// m_SsThreshFactor (8),
+	// m_RttFactor (128),
+	// m_LossDecFactor (819),
+	// m_CwndGrowthRateNeg (8),
+	// m_CwndGrowthRatePos (0),
+	// m_DecEvalMinCalls (60),
+	// m_IncEvalMinCalls (20),
+	// m_SsThreshEvalMinCalls (30),
+	// m_StopRttCnt (10),
+	// m_RttMinCnt (2),
+	// m_InitRtt (Time::Max ()),
+	// m_MinCwndNv (4),
+	// m_MinCwndGrow (2),
+	// m_TsoCwndBound (80)
+
+	// m_NvAllowCwndGrowth (1),
+	// m_MinRttResetJiffies (),
+	// m_MinRtt (Time::Max()),
+	// m_MinRttNew (Time::Max()),
+	// m_NvCatchup (0),
+	// m_CwndGrowthFactor (0)
 
 {
 	NS_LOG_FUNCTION (this);
@@ -47,8 +71,15 @@ TcpNewVegas::TcpNewVegas (void)
 
 TcpNewVegas::TcpNewVegas (const TcpNewVegas& sock)
 	: TcpNewReno (sock)
+	// m_NvAllowCwndGrowth (1),
+	// m_MinRttResetJiffies (),
+	// m_MinRtt (sock.m_InitRtt),
+	// m_MinRttNew (sock.m_InitRtt),
+	// m_MinCwnd (sock.m_MinCwndNv),
+	// m_NvCatchup (0),
+	// m_CwndGrowthFactor (0)
 {
-
+	NS_LOG_FUNCTION (this);
 }
 
 TcpNewVegas::~TcpNewVegas (void)
@@ -252,6 +283,25 @@ void
 TcpNewVegas::CongestionStateSet (Ptr<TcpSocketState> tcb,
                               const TcpSocketState::TcpCongState_t newState)
 {
+	if (newState == TcpSocketState::CA_OPEN && m_NvReset)
+	{
+		// tcp reset
+	}
+	else if (newState == TcpSocketState::CA_LOSS || newState == TcpSocketState::CA_RECOVERY || newState == TcpSocketState::CA_CWR)
+	{
+		m_NvReset = 1;
+		m_NvAllowCwndGrowth = 0;
+		if (newState == TcpSocketState::CA_LOSS)
+		{
+			if( m_CwndGrowthFactor > 0)
+				m_CwndGrowthFactor = 0;
+
+			if (m_CwndGrowthRateNeg>0 && m_CwndGrowthFactor>0)
+			{
+				m_CwndGrowthFactor--;
+			}
+		}
+	}
 
 }
 
@@ -272,8 +322,8 @@ uint32_t
 TcpNewVegas::GetSsThresh (Ptr<const TcpSocketState> tcb,
                        uint32_t bytesInFlight)
 {
-	// returning 1 for now,make sure to change
-	return 1;
+	uint32_t segCwnd = tcb->GetCwndInSegments ();
+	return (segCwnd*m_LossDecFactor)>>10;
 }
 
 }	// namespace ns3

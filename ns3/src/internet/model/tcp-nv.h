@@ -44,9 +44,9 @@ private:
 
 	// Macro Parameters
 	Time m_InitRtt;
-    double m_MinCwndNv;
-    double m_MinCwndGrow;  
-    double m_TsoCwndBound; 
+ 	double m_MinCwndNv;
+ 	double m_MinCwndGrow;  
+ 	double m_TsoCwndBound; 
 
 	// User Parameters
 	uint32_t m_Pad;
