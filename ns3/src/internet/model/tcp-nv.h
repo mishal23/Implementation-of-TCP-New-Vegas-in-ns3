@@ -25,6 +25,10 @@ public:
 	//
 	virtual std::string GetName () const;
 
+	virtual void TcpNewVegasReset(Ptr<TcpSocketState> tcb);
+
+	virtual void TcpNewVegasInit(Ptr<TcpSocketState> tcb);
+
 	// Hook for packet ack accounting (tcpnv_acked)
 	virtual void PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,uint32_t bytesInFlight, const Time& rtt);
 
