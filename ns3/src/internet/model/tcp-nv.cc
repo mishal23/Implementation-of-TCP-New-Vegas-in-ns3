@@ -14,21 +14,17 @@ TcpNewVegas::GetTypeId (void)
 	.SetParent<TcpNewReno> ()
     .AddConstructor<TcpNewVegas> ()
     .SetGroupName ("Internet")
-    .AddAttribute ("InitRtt", "Initial value of the RTT",
-                   TimeValue (MilliSeconds(2)),
-                   MakeTimeAccessor (&TcpNewVegas::m_InitRtt),
-                   MakeTimeChecker ())
-    .AddAttribute ("MinCwnd", "Minimum size of Congestion Window",
-                   UintegerValue (4),
-                   MakeUintegerAccessor (&TcpNewVegas::m_MinCwndNv),
+    .AddAttribute ("m_Pad", "Max queued packets allowed in Network",
+                   UintegerValue (10),
+                   MakeUintegerAccessor (&TcpNewVegas::m_Pad),
                    MakeUintegerChecker<uint32_t> ())
-    .AddAttribute ("MinCwndGrow", "Growth of Minimum Cwnd",
+    .AddAttribute ("m_ResetPeriod", "m_MinRtt reset period (secs)",
+                   TimeValue (Seconds (5)),
+                   MakeTimeAccessor (&TcpNewVegas::m_ResetPeriod),
+                   MakeTimeChecker())
+    .AddAttribute ("m_MinCwnd", "NV will not decrease cwnd below this value without losses",
                    UintegerValue (2),
-                   MakeUintegerAccessor (&TcpNewVegas::m_MinCwndGrow),
-                   MakeUintegerChecker<uint32_t> ())
-    .AddAttribute ("TsoCwndBound", "Cwnd bound by TSO",
-                   UintegerValue (80),
-                   MakeUintegerAccessor (&TcpNewVegas::m_TsoCwndBound),
+                   MakeUintegerAccessor (&TcpNewVegas::m_MinCwnd),
                    MakeUintegerChecker<uint32_t> ())
     
   ;
@@ -38,7 +34,7 @@ TcpNewVegas::GetTypeId (void)
 
 TcpNewVegas::TcpNewVegas (void)
 	: TcpNewReno (),
-  m_InitRtt (Time::Max ()),
+  	m_InitRtt (Time::Max ()),
 	m_MinCwndNv (4),
 	m_MinCwndGrow (2),
 	m_TsoCwndBound (80),
@@ -59,36 +55,66 @@ TcpNewVegas::TcpNewVegas (void)
 	m_RttMinCnt (2),
 	
 	m_MinRttResetJiffies (),
-  m_CwndGrowthFactor(0),
-  m_NvAllowCwndGrowth (1),
-  m_NvReset(0),
-  m_NvCatchup(0),
-  m_EvalCallCount(0),
-  m_NvMinCwnd(m_MinCwndNv),
-	m_RttCount(0),
-  m_LastRtt(0),
+    m_CwndGrowthFactor(0),
+    m_NvAllowCwndGrowth (1),
+    m_NvReset(0),
+    m_NvCatchup(0),
+    m_EvalCallCount(0),
+    m_NvMinCwnd(m_MinCwndNv),
+    m_RttCount(0),
+    m_LastRtt(0),
 	m_MinRtt (Time::Max()),
 	m_MinRttNew (Time::Max()),
-  m_BaseRtt(),        
-	m_LowerBoundRtt(), 
+    m_BaseRtt(0),        
+	m_LowerBoundRtt(0), 
 	m_RttMaxRate(0),
 	m_RttStartSeq(),
 	m_LastSndUna(),
-  m_NoCongCnt(0)
+    m_NoCongCnt(0)
 
 {
 	NS_LOG_FUNCTION (this);
 }
 
 TcpNewVegas::TcpNewVegas (const TcpNewVegas& sock)
-	: TcpNewReno (sock)
-	// m_NvAllowCwndGrowth (1),
-	// m_MinRttResetJiffies (),
-	// m_MinRtt (sock.m_InitRtt),
-	// m_MinRttNew (sock.m_InitRtt),
-	// m_MinCwnd (sock.m_MinCwndNv),
-	// m_NvCatchup (0),
-	// m_CwndGrowthFactor (0)
+	: TcpNewReno (sock),
+  	m_InitRtt (Time::Max ()),
+	m_MinCwndNv (sock.m_MinCwndNv),
+	m_MinCwndGrow (sock.m_MinCwndGrow),
+	m_TsoCwndBound (sock.m_TsoCwndBound),
+	m_Pad (sock.m_Pad),
+	m_PadBuffer (sock.m_PadBuffer),
+	m_ResetPeriod (sock.m_ResetPeriod),
+	m_MinCwnd (sock.m_MinCwnd),
+	m_CongDecMult (sock.m_CongDecMult),
+	m_SsThreshFactor (sock.m_SsThreshFactor),
+	m_RttFactor (sock.m_RttFactor),
+	m_LossDecFactor (sock.m_LossDecFactor),
+	m_CwndGrowthRateNeg (sock.m_CwndGrowthRateNeg),  
+	m_CwndGrowthRatePos (sock.m_CwndGrowthRatePos),
+	m_DecEvalMinCalls (sock.m_DecEvalMinCalls),
+	m_IncEvalMinCalls (sock.m_IncEvalMinCalls),
+	m_SsThreshEvalMinCalls (sock.m_SsThreshEvalMinCalls),
+	m_StopRttCnt (sock.m_StopRttCnt),
+	m_RttMinCnt (sock.m_RttMinCnt),
+	
+	m_MinRttResetJiffies (),
+    m_CwndGrowthFactor(sock.m_CwndGrowthFactor),
+    m_NvAllowCwndGrowth (sock.m_NvAllowCwndGrowth),
+    m_NvReset (sock.m_NvReset),
+    m_NvCatchup (sock.m_NvCatchup),
+    m_EvalCallCount(sock.m_EvalCallCount),
+    m_NvMinCwnd(sock.m_NvMinCwnd),
+    m_RttCount(sock.m_RttCount),
+    m_LastRtt(sock.m_LastRtt),
+	m_MinRtt (sock.m_MinRtt),
+	m_MinRttNew (sock.m_MinRttNew),
+    m_BaseRtt(sock.m_BaseRtt),        
+	m_LowerBoundRtt(sock.m_LowerBoundRtt), 
+	m_RttMaxRate(sock.m_RttMaxRate),
+	m_RttStartSeq(),
+	m_LastSndUna(),
+    m_NoCongCnt(sock.m_NoCongCnt)
 {
 	NS_LOG_FUNCTION (this);
 }
@@ -102,6 +128,35 @@ Ptr<TcpCongestionOps>
 TcpNewVegas::Fork (void)
 {
   return CopyObject<TcpNewVegas> (this);
+}
+
+void
+TcpNewVegas::TcpNewVegasReset(Ptr<TcpSocketState> tcb)
+{
+	m_NvReset = 0;
+	m_NoCongCnt = 0;
+	m_RttCount = 0;
+	m_LastRtt = Time::Min() ;
+	m_RttMaxRate = 0;
+	m_RttStartSeq = tcb->m_lastAckedSeq;
+	m_EvalCallCount = 0;
+	m_LastSndUna = tcb->m_lastAckedSeq;
+}
+
+void
+TcpNewVegas::TcpNewVegasInit(Ptr<TcpSocketState> tcb)
+{
+	NS_LOG_FUNCTION (this << tcb);
+
+	TcpNewVegasReset(tcb);
+
+	m_NvAllowCwndGrowth = 1;
+	//m_MinRttResetJiffies = 0;
+	m_MinRtt = m_InitRtt;
+	m_MinRttNew = m_InitRtt;
+	m_MinCwnd = m_MinCwndNv;
+	m_NvCatchup = 0;
+	m_CwndGrowthFactor = 0;
 }
 
 void
