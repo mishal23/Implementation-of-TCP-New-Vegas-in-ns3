@@ -324,6 +324,50 @@ TcpNewVegas::CongestionStateSet (Ptr<TcpSocketState> tcb,
 void
 TcpNewVegas::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 {
+	NS_LOG_FUNCTION (this << tcb << segmentsAcked);
+
+	// if (tcb->m_cWnd < tcb->m_ssThresh)
+ //    {
+ //      tcb->m_cWnd += tcb->m_segmentSize;
+ //      segmentsAcked -= 1;
+
+ //      NS_LOG_INFO ("In SlowStart, updated to cwnd " << tcb->m_cWnd <<
+ //                   " ssthresh " << tcb->m_ssThresh);
+ //    }
+
+	if(!m_NvAllowCwndGrowth)
+		return;
+
+	if (tcb->m_cWnd < tcb->m_ssThresh)
+	{
+		segmentsAcked = TcpNewReno::SlowStart(tcb, segmentsAcked);		
+		if(!segmentsAcked)
+		{
+			return;
+		}
+	}
+
+	uint32_t cnt;
+
+	if (m_CwndGrowthFactor < 0)
+	{
+		cnt = tcb->m_cWnd << -1*(m_CwndGrowthFactor);
+		TcpNewReno::CongestionAvoidance(tcb, cnt);
+	}
+	else 
+	{
+		// cnt = std::max(static_cast<uint32_t>(4), (tcb->m_cWnd >> m_CwndGrowthFactor));
+		if (static_cast<uint32_t>	(4) > (tcb->m_cWnd >> m_CwndGrowthFactor))
+		{
+			cnt = 4;
+		}
+		else
+		{
+			cnt = (tcb->m_cWnd >> m_CwndGrowthFactor);
+		}
+		TcpNewReno::CongestionAvoidance(tcb, cnt);
+	}
+
 
 }
 
