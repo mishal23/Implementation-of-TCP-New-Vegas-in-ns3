@@ -389,6 +389,7 @@ def build(bld):
         'model/tcp-westwood.h',
         'model/tcp-scalable.h',
         'model/tcp-veno.h',
+        'model/tcp-nv.h',
         'model/tcp-bic.h',
         'model/tcp-yeah.h',
         'model/tcp-illinois.h',

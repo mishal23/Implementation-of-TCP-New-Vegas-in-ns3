@@ -206,6 +206,7 @@ TraceNextRx (std::string &next_rx_seq_file_name)
 
 int main (int argc, char *argv[])
 {
+  // LogComponentEnable("TcpVegas", LOG_LEVEL_ALL);
   std::string transport_prot = "TcpWestwood";
   double error_p = 0.0;
   std::string bandwidth = "2Mbps";
@@ -215,7 +216,7 @@ int main (int argc, char *argv[])
   bool tracing = false;
   std::string prefix_file_name = "TcpVariantsComparison";
   uint64_t data_mbytes = 0;
-  uint32_t mtu_bytes = 400;
+  uint32_t mtu_bytes = 1500;
   uint16_t num_flows = 1;
   double duration = 100.0;
   uint32_t run = 0;
@@ -230,7 +231,7 @@ int main (int argc, char *argv[])
   cmd.AddValue ("transport_prot", "Transport protocol to use: TcpNewReno, "
                 "TcpHybla, TcpHighSpeed, TcpHtcp, TcpVegas, TcpScalable, TcpVeno, "
                 "TcpBic, TcpYeah, TcpIllinois, TcpWestwood, TcpWestwoodPlus, TcpLedbat, "
-		"TcpLp", transport_prot);
+    "TcpLp", transport_prot);
   cmd.AddValue ("error_p", "Packet error rate", error_p);
   cmd.AddValue ("bandwidth", "Bottleneck bandwidth", bandwidth);
   cmd.AddValue ("delay", "Bottleneck delay", delay);
