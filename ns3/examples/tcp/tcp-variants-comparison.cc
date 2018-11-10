@@ -216,7 +216,7 @@ int main (int argc, char *argv[])
   bool tracing = false;
   std::string prefix_file_name = "TcpVariantsComparison";
   uint64_t data_mbytes = 0;
-  uint32_t mtu_bytes = 400;
+  uint32_t mtu_bytes = 1500;
   uint16_t num_flows = 1;
   double duration = 100.0;
   uint32_t run = 0;

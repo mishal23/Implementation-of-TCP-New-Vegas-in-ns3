@@ -74,9 +74,7 @@ TcpNewVegas::TcpNewVegas (void)
 
 {
 	NS_LOG_FUNCTION (this);
-	NS_LOG_LOGIC ("Main init");
-	printf("Main Init\n");
-	
+	NS_LOG_LOGIC ("Main init");	
 }
 
 TcpNewVegas::TcpNewVegas (const TcpNewVegas& sock)
@@ -120,8 +118,6 @@ TcpNewVegas::TcpNewVegas (const TcpNewVegas& sock)
     m_NoCongCnt(sock.m_NoCongCnt)
 {
 	NS_LOG_FUNCTION (this);
-	printf("Socket Init\n");
-
 }
 
 TcpNewVegas::~TcpNewVegas (void)
@@ -139,7 +135,6 @@ void
 TcpNewVegas::TcpNewVegasReset(Ptr<TcpSocketState> tcb)
 {
 	NS_LOG_LOGIC ("Reset");
-	printf("Reset\n");
 	m_NvReset = 0;
 	m_NoCongCnt = 0;
 	m_RttCount = 0;
@@ -151,35 +146,32 @@ TcpNewVegas::TcpNewVegasReset(Ptr<TcpSocketState> tcb)
 	m_LastSndUna = tcb->m_lastAckedSeq;
 }
 
-void
-TcpNewVegas::TcpNewVegasInit(Ptr<TcpSocketState> tcb)
-{
-	printf("Self declared INIT\n");
-	NS_LOG_FUNCTION (this << tcb);
+// void
+// TcpNewVegas::TcpNewVegasInit(Ptr<TcpSocketState> tcb)
+// {
+// 	NS_LOG_FUNCTION (this << tcb);
 
-	TcpNewVegasReset(tcb);
+// 	TcpNewVegasReset(tcb);
 
-	m_NvAllowCwndGrowth = 1;
-	//m_MinRttResetJiffies = 0;
-	m_MinRtt = m_InitRtt;
-	m_MinRttNew = m_InitRtt;
-	m_MinCwnd = m_MinCwndNv;
-	m_NvCatchup = 0;
-	m_CwndGrowthFactor = 0;
-}
+// 	m_NvAllowCwndGrowth = 1;
+// 	//m_MinRttResetJiffies = 0;
+// 	m_MinRtt = m_InitRtt;
+// 	m_MinRttNew = m_InitRtt;
+// 	m_MinCwnd = m_MinCwndNv;
+// 	m_NvCatchup = 0;
+// 	m_CwndGrowthFactor = 0;
+// }
 
 void
 TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
                      const Time& rtt)
 {
-	// printf("Packets acked\n");
 	NS_LOG_LOGIC ("Packets acked");
 	NS_LOG_FUNCTION (this << tcb << segmentsAcked << rtt);
 	uint64_t rate64;
 	uint32_t rate, max_win, cwnd_by_slope;
 	Time avg_rtt;
 	SequenceNumber32 bytes_acked;
-
 	
 	if (rtt.IsZero ())
     {
@@ -203,9 +195,8 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 	uint32_t bytes = bytes_acked.GetValue();
 	m_LastSndUna = tcb->m_lastAckedSeq;
 
-	if (tcb->m_bytesInFlight.Get()==0) //here
+	if (tcb->m_bytesInFlight.Get()==0)
 		return;
-
 
 	if (m_RttFactor > 0) {
 		if (m_LastRtt > 0) {
@@ -218,18 +209,15 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 	} else {
 		avg_rtt = rtt;
 	}
-	// std::cout<<"Average RTT: "<<avg_rtt<<"\n";
 
 	rate64 = tcb->m_bytesInFlight.Get() * 80000;
 
 	double tmp = 1.0 / avg_rtt.GetDouble ();
 
-	if(avg_rtt != 0) //changed
+	if(avg_rtt != 0)
 		rate = static_cast<uint32_t>(rate64 * tmp);
 	else
 		rate = rate64;
-
-	
 
 	if (m_RttMaxRate < rate)
 		m_RttMaxRate = rate;
@@ -238,8 +226,6 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 	if (m_EvalCallCount < 255)
 		m_EvalCallCount++;
 
-
-	
 
 	if (m_LowerBoundRtt > 0 && avg_rtt < m_LowerBoundRtt)
 		avg_rtt = m_LowerBoundRtt;
@@ -261,7 +247,6 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 		if (m_RttCount < 0xff)
 		{	
 			m_RttCount++;
-			std::cout<<"RTT Count: "<<m_RttCount<<"\n";
 		}
 
 		if (m_EvalCallCount == 1 &&
@@ -278,47 +263,53 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 			return;
 		}
 
-
 	
         tmp = m_MinRtt.GetDouble();
 		cwnd_by_slope = static_cast<uint32_t> (m_RttMaxRate * tmp) / (80000 * tcb->m_segmentSize);
 		
 		max_win = cwnd_by_slope + m_Pad;
-      	std::cout<<"Maximum Window: "<<max_win<<"\n";
-      	std::cout<<"segCwnd: "<<segCwnd<<"\n";
+		
 		if (segCwnd > max_win) {
-			if (m_RttCount < m_RttMinCnt) {
-				std::cout<<m_RttCount<<" "<<m_RttMinCnt<<"\n";
-				return;
-			} 
+			 if (m_RttCount < m_RttMinCnt) {
+			 	return;
+			 } 
 			else if (tcb->m_ssThresh == tcb->m_initialSsThresh)
-			    { 
+			 { 
+			
 				if (m_EvalCallCount <
 				    m_SsThreshEvalMinCalls)
 					return;
-			    }
+			 }
 
 			 else if (m_EvalCallCount <
 				   m_DecEvalMinCalls) {
+
+			
 				if (m_NvAllowCwndGrowth &&
 				    m_RttCount > m_StopRttCnt)
+				{
 					m_NvAllowCwndGrowth = false;
+				}
 				return;
 			}
-		
 	
 
 			m_NvAllowCwndGrowth = false;
 			tcb->m_ssThresh = (m_SsThreshFactor * max_win) / 8;
 			if (segCwnd - max_win > 2) {
-				// printf("Decreasing cwnd\n");
 				uint32_t dec;
                 if(((segCwnd - max_win)*m_CongDecMult) / 128 > 2 )
+                {
                 	dec = ((segCwnd - max_win)*m_CongDecMult) / 128;
+                }
                 else
+                {	
                 	dec = 2;
-                segCwnd -= dec;
+                }
+                segCwnd = segCwnd - dec;
+                tcb->m_cWnd = segCwnd * tcb->m_segmentSize;
 			} else if (m_CongDecMult > 0) {
+				
 				segCwnd = max_win;
 			}
 			if (m_CwndGrowthFactor > 0)
@@ -353,28 +344,25 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 		if (segCwnd < m_MinCwnd)
 			segCwnd = m_MinCwnd;
 	}
-	
-
-
-
 }
+
 
 void
 TcpNewVegas::CongestionStateSet (Ptr<TcpSocketState> tcb,
                               const TcpSocketState::TcpCongState_t newState)
 {
 	// NS_LOG_LOGIC ("Congestion State Set");
-	printf("Congestion Set State\n");
 	if (newState == TcpSocketState::CA_OPEN && m_NvReset)
 	{
-		// tcp reset
+		TcpNewVegasReset(tcb);
 	}
-	else if (newState == TcpSocketState::CA_LOSS || newState == TcpSocketState::CA_RECOVERY || newState == TcpSocketState::CA_CWR)
+	else if (newState == TcpSocketState::CA_LOSS || newState == TcpSocketState::CA_RECOVERY || newState == TcpSocketState::CA_CWR || newState == TcpSocketState::CA_DISORDER)
 	{
 		m_NvReset = 1;
 		m_NvAllowCwndGrowth = 0;
 		if (newState == TcpSocketState::CA_LOSS)
 		{
+
 			if( m_CwndGrowthFactor > 0)
 				m_CwndGrowthFactor = 0;
 
@@ -391,17 +379,8 @@ TcpNewVegas::CongestionStateSet (Ptr<TcpSocketState> tcb,
 void
 TcpNewVegas::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 {
-	// printf("Increase Window\n");
 	NS_LOG_FUNCTION (this << tcb << segmentsAcked);
 
-	// if (tcb->m_cWnd < tcb->m_ssThresh)
- //    {
- //      tcb->m_cWnd += tcb->m_segmentSize;
- //      segmentsAcked -= 1;
-
- //      NS_LOG_INFO ("In SlowStart, updated to cwnd " << tcb->m_cWnd <<
- //                   " ssthresh " << tcb->m_ssThresh);
- //    }
 
 	if(!m_NvAllowCwndGrowth)
 		return;
@@ -424,7 +403,6 @@ TcpNewVegas::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 	}
 	else 
 	{
-		// cnt = std::max(static_cast<uint32_t>(4), (tcb->m_cWnd >> m_CwndGrowthFactor));
 		if (static_cast<uint32_t>	(4) > (tcb->m_cWnd >> m_CwndGrowthFactor))
 		{
 			cnt = 4;
@@ -450,7 +428,6 @@ TcpNewVegas::GetSsThresh (Ptr<const TcpSocketState> tcb,
                        uint32_t bytesInFlight)
 {
 	NS_LOG_LOGIC ("SS Thresh");
-	printf("SS Thresh\n");
 	uint32_t segCwnd = tcb->GetCwndInSegments ();
 	return (segCwnd*m_LossDecFactor)>>10;
 }

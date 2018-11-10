@@ -27,7 +27,7 @@ public:
 
 	virtual void TcpNewVegasReset(Ptr<TcpSocketState> tcb);
 
-	virtual void TcpNewVegasInit(Ptr<TcpSocketState> tcb);
+	// virtual void TcpNewVegasInit(Ptr<TcpSocketState> tcb);
 
 	// Hook for packet ack accounting (tcpnv_acked)
 	virtual void PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, const Time& rtt);
@@ -75,8 +75,8 @@ private:
 	bool m_NvAllowCwndGrowth;
 	bool m_NvReset;
 	bool m_NvCatchup;
-	uint8_t m_EvalCallCount;
-	uint8_t m_NvMinCwnd;
+	uint32_t m_EvalCallCount;
+	uint32_t m_NvMinCwnd;
 	uint32_t m_RttCount;
     Time m_LastRtt;	
 	Time m_MinRtt;		
