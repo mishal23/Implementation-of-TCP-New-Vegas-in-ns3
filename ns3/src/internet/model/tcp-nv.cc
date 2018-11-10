@@ -1,6 +1,30 @@
+/*
+ * TCP NV: TCP with Congestion Avoidance
+ *
+ * TCP-NV is a successor of TCP-Vegas that has been developed to
+ * deal with the issues that occur in modern networks.
+ * Like TCP-Vegas, TCP-NV supports true congestion avoidance,
+ * the ability to detect congestion before packet losses occur.
+ * When congestion (queue buildup) starts to occur, TCP-NV
+ * predicts what the cwnd size should be for the current
+ * throughput and it reduces the cwnd proportionally to
+ * the difference between the current cwnd and the predicted cwnd.
+ *
+ * NV is only recommeneded for traffic within a data center, and when
+ * all the flows are NV (at least those within the data center). This
+ * is due to the inherent unfairness between flows using losses to
+ * detect congestion (congestion control) and those that use queue
+ * buildup to detect congestion (congestion avoidance).
+ *
+ * Note: High NIC coalescence values may lower the performance of NV
+ * due to the increased noise in RTT values. In particular, we have
+ * seen issues with rx-frames values greater than 8.
+ *
+ */
+
 #include "tcp-nv.h"
 #include "ns3/log.h"
-#include <bits/stdc++.h>
+
 
 namespace ns3 {
 
@@ -146,22 +170,9 @@ TcpNewVegas::TcpNewVegasReset(Ptr<TcpSocketState> tcb)
 	m_LastSndUna = tcb->m_lastAckedSeq;
 }
 
-// void
-// TcpNewVegas::TcpNewVegasInit(Ptr<TcpSocketState> tcb)
-// {
-// 	NS_LOG_FUNCTION (this << tcb);
 
-// 	TcpNewVegasReset(tcb);
-
-// 	m_NvAllowCwndGrowth = 1;
-// 	//m_MinRttResetJiffies = 0;
-// 	m_MinRtt = m_InitRtt;
-// 	m_MinRttNew = m_InitRtt;
-// 	m_MinCwnd = m_MinCwndNv;
-// 	m_NvCatchup = 0;
-// 	m_CwndGrowthFactor = 0;
-// }
-
+/* Do congestion avoidance calculations for TCP-NV
+ */
 void
 TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
                      const Time& rtt)
@@ -173,19 +184,23 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 	Time avg_rtt;
 	SequenceNumber32 bytes_acked;
 	
+
+	/* Some calls are for duplicates without timetamps */
 	if (rtt.IsZero ())
     {
       return;
     }
 
+
+
     uint32_t segCwnd = tcb->GetCwndInSegments ();
 
-
+	/* If not in TCP_CA_Open or TCP_CA_Disorder states, skip. */
   	if(tcb->m_congState != TcpSocketState::CA_OPEN && 
               tcb->m_congState!=TcpSocketState::CA_DISORDER)
       return;
 
-	
+	/* Stop cwnd growth if we were in catch up mode */
 	if (m_NvCatchup && segCwnd >= m_MinCwnd) {
 		m_NvCatchup = false;
 		m_NvAllowCwndGrowth = false;
@@ -198,6 +213,9 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 	if (tcb->m_bytesInFlight.Get()==0)
 		return;
 
+
+
+	/* Calculate moving average of RTT */
 	if (m_RttFactor > 0) {
 		if (m_LastRtt > 0) {
 			avg_rtt = ((rtt) * m_RttFactor + (m_LastRtt)*(256 - m_RttFactor)) / 256;
@@ -210,6 +228,7 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 		avg_rtt = rtt;
 	}
 
+	/* rate in 100's bits per second */
 	rate64 = tcb->m_bytesInFlight.Get() * 80000;
 
 	double tmp = 1.0 / avg_rtt.GetDouble ();
@@ -219,12 +238,23 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 	else
 		rate = rate64;
 
+	/* Remember the maximum rate seen during this RTT
+	 * Note: It may be more than one RTT. This function should be
+	 *       called at least nv_dec_eval_min_calls times.
+	 */
+
 	if (m_RttMaxRate < rate)
 		m_RttMaxRate = rate;
 
-
+	/* We have valid information, increment counter */
 	if (m_EvalCallCount < 255)
 		m_EvalCallCount++;
+
+
+    /* If provided, apply upper (base_rtt) and lower (lower_bound_rtt)
+     * bounds to RTT.
+     */
+
 
 
 	if (m_LowerBoundRtt > 0 && avg_rtt < m_LowerBoundRtt)
@@ -232,22 +262,29 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 	else if (m_BaseRtt > 0 && avg_rtt > m_BaseRtt)
 		avg_rtt = m_BaseRtt;
 	
-
+	/* update min rtt if necessary */
 	if (avg_rtt < m_MinRtt)
 		m_MinRtt = avg_rtt;
 
-
+	/* update future min_rtt if necessary */
 	if (avg_rtt < m_MinRttNew)
 		m_MinRttNew = avg_rtt;
 
-	
+	/* Once per RTT check if we need to do congestion avoidance */	
 	if (m_RttStartSeq < tcb->m_lastAckedSeq) {
 		
 		m_RttStartSeq = tcb->m_nextTxSequence;
 		if (m_RttCount < 0xff)
 		{	
+			/* Increase counter for RTTs without CA decision */
 			m_RttCount++;
 		}
+
+		/* If this function is only called once within an RTT
+		 * the cwnd is probably too small (in some cases due to
+		 * tso, lro or interrupt coalescence), so we increase
+		 * ca->nv_min_cwnd.
+		 */
 
 		if (m_EvalCallCount == 1 &&
 		    (bytes) >= (m_NvMinCwnd - 1) * tcb->m_segmentSize &&
@@ -263,13 +300,30 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 			return;
 		}
 
-	
+	    /* Find the ideal cwnd for current rate from slope
+		 * slope = 80000.0 * mss / nv_min_rtt
+		 * cwnd_by_slope = nv_rtt_max_rate / slope
+		 */
+        
         tmp = m_MinRtt.GetDouble();
+		
 		cwnd_by_slope = static_cast<uint32_t> (m_RttMaxRate * tmp) / (80000 * tcb->m_segmentSize);
 		
 		max_win = cwnd_by_slope + m_Pad;
+
+		/* If cwnd > max_win, decrease cwnd
+		 * if cwnd < max_win, grow cwnd
+		 * else leave the same
+		 */
 		
 		if (segCwnd > max_win) {
+			/* there is congestion, check that it is ok
+			 * to make a CA decision
+			 * 1. We should have at least nv_dec_eval_min_calls
+			 *    data points before making a CA  decision
+			 * 2. We only make a congesion decision after
+			 *    nv_rtt_min_cnt RTTs
+			 */
 			 if (m_RttCount < m_RttMinCnt) {
 			 	return;
 			 } 
@@ -280,7 +334,7 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 				    m_SsThreshEvalMinCalls)
 					return;
 			 }
-
+           	/* otherwise we will decrease cwnd */
 			 else if (m_EvalCallCount <
 				   m_DecEvalMinCalls) {
 
@@ -293,10 +347,11 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 				return;
 			}
 	
-
+         	/* We have enough data to determine we are congested */
 			m_NvAllowCwndGrowth = false;
 			tcb->m_ssThresh = (m_SsThreshFactor * max_win) / 8;
 			if (segCwnd - max_win > 2) {
+				/* gap > 2, we do exponential cwnd decrease */
 				uint32_t dec;
                 if(((segCwnd - max_win)*m_CongDecMult) / 128 > 2 )
                 {
@@ -316,6 +371,7 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 				m_CwndGrowthFactor = 0;
 			m_NoCongCnt = 0;
 		} else if (segCwnd <= max_win - m_PadBuffer) {
+				/* There is no congestion, grow cwnd if allowed*/
 			if (m_EvalCallCount < m_IncEvalMinCalls)
 				return;
 
@@ -333,14 +389,19 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 				m_NoCongCnt = 0;
 			}
 		} else {
+			/* cwnd is in-between, so do nothing */
 			return;
 		}
 
-        
+        	/* update state */
         m_EvalCallCount = 0;
 		m_RttCount = 0;
 		m_RttMaxRate = 0;
 
+        /* Don't want to make cwnd < nv_min_cwnd
+		 * (it wasn't before, if it is now is because nv
+		 *  decreased it).
+		 */
 		if (segCwnd < m_MinCwnd)
 			segCwnd = m_MinCwnd;
 	}
@@ -381,6 +442,7 @@ TcpNewVegas::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 {
 	NS_LOG_FUNCTION (this << tcb << segmentsAcked);
 
+    /* Only grow cwnd if NV has not detected congestion */
 
 	if(!m_NvAllowCwndGrowth)
 		return;
@@ -395,13 +457,13 @@ TcpNewVegas::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 	}
 
 	uint32_t cnt;
-
+    	/* Reset cwnd growth factor to Reno value */
 	if (m_CwndGrowthFactor < 0)
 	{
 		cnt = tcb->m_cWnd << -1*(m_CwndGrowthFactor);
 		TcpNewReno::CongestionAvoidance(tcb, cnt);
 	}
-	else 
+	else 	/* Decrease growth rate if allowed */
 	{
 		if (static_cast<uint32_t>	(4) > (tcb->m_cWnd >> m_CwndGrowthFactor))
 		{
