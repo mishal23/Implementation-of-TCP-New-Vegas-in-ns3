@@ -206,6 +206,7 @@ TraceNextRx (std::string &next_rx_seq_file_name)
 
 int main (int argc, char *argv[])
 {
+  // LogComponentEnable("TcpVegas", LOG_LEVEL_ALL);
   std::string transport_prot = "TcpWestwood";
   double error_p = 0.0;
   std::string bandwidth = "2Mbps";

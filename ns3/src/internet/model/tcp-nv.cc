@@ -5,7 +5,7 @@
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("TcpNewVegas");
-// NS_OBJECT_ENSURE_REGISTERED (TcpNewVegas);
+NS_OBJECT_ENSURE_REGISTERED (TcpNewVegas);
 
 TypeId
 TcpNewVegas::GetTypeId (void)
@@ -68,12 +68,15 @@ TcpNewVegas::TcpNewVegas (void)
     m_BaseRtt(0),        
 	m_LowerBoundRtt(0), 
 	m_RttMaxRate(0),
-	m_RttStartSeq(),
-	m_LastSndUna(),
+	m_RttStartSeq(0),
+	m_LastSndUna(0),
     m_NoCongCnt(0)
 
 {
 	NS_LOG_FUNCTION (this);
+	NS_LOG_LOGIC ("Main init");
+	printf("Main Init\n");
+	
 }
 
 TcpNewVegas::TcpNewVegas (const TcpNewVegas& sock)
@@ -112,11 +115,13 @@ TcpNewVegas::TcpNewVegas (const TcpNewVegas& sock)
     m_BaseRtt(sock.m_BaseRtt),        
 	m_LowerBoundRtt(sock.m_LowerBoundRtt), 
 	m_RttMaxRate(sock.m_RttMaxRate),
-	m_RttStartSeq(),
-	m_LastSndUna(),
+	m_RttStartSeq(sock.m_RttStartSeq),
+	m_LastSndUna(sock.m_LastSndUna),
     m_NoCongCnt(sock.m_NoCongCnt)
 {
 	NS_LOG_FUNCTION (this);
+	printf("Socket Init\n");
+
 }
 
 TcpNewVegas::~TcpNewVegas (void)
@@ -133,10 +138,13 @@ TcpNewVegas::Fork (void)
 void
 TcpNewVegas::TcpNewVegasReset(Ptr<TcpSocketState> tcb)
 {
+	NS_LOG_LOGIC ("Reset");
+	printf("Reset\n");
 	m_NvReset = 0;
 	m_NoCongCnt = 0;
 	m_RttCount = 0;
-	m_LastRtt = Time::Min() ;
+	// m_LastRtt = Time::Min() ;
+	m_LastRtt = Seconds(0);
 	m_RttMaxRate = 0;
 	m_RttStartSeq = tcb->m_lastAckedSeq;
 	m_EvalCallCount = 0;
@@ -146,6 +154,7 @@ TcpNewVegas::TcpNewVegasReset(Ptr<TcpSocketState> tcb)
 void
 TcpNewVegas::TcpNewVegasInit(Ptr<TcpSocketState> tcb)
 {
+	printf("Self declared INIT\n");
 	NS_LOG_FUNCTION (this << tcb);
 
 	TcpNewVegasReset(tcb);
@@ -160,13 +169,12 @@ TcpNewVegas::TcpNewVegasInit(Ptr<TcpSocketState> tcb)
 }
 
 void
-TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, uint32_t bytesInFlight,
+TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
                      const Time& rtt)
 {
-
-
-	
-    NS_LOG_FUNCTION (this << tcb << segmentsAcked << rtt << bytesInFlight);
+	// printf("Packets acked\n");
+	NS_LOG_LOGIC ("Packets acked");
+	NS_LOG_FUNCTION (this << tcb << segmentsAcked << rtt);
 	uint64_t rate64;
 	uint32_t rate, max_win, cwnd_by_slope;
 	Time avg_rtt;
@@ -180,13 +188,8 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, uint32_
 
     uint32_t segCwnd = tcb->GetCwndInSegments ();
 
-    //I don't know how to do it
-	/* If not in TCP_CA_Open or TCP_CA_Disorder states, skip. */
-	/*if (icsk->icsk_ca_state != TCP_CA_Open &&
-	    icsk->icsk_ca_state != TCP_CA_Disorder)
-		return;*/
 
-  if(tcb->m_congState != TcpSocketState::CA_OPEN && 
+  	if(tcb->m_congState != TcpSocketState::CA_OPEN && 
               tcb->m_congState!=TcpSocketState::CA_DISORDER)
       return;
 
@@ -200,7 +203,7 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, uint32_
 	uint32_t bytes = bytes_acked.GetValue();
 	m_LastSndUna = tcb->m_lastAckedSeq;
 
-	if (bytesInFlight==0)
+	if (tcb->m_bytesInFlight.Get()==0) //here
 		return;
 
 
@@ -215,13 +218,13 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, uint32_
 	} else {
 		avg_rtt = rtt;
 	}
+	// std::cout<<"Average RTT: "<<avg_rtt<<"\n";
 
-
-	rate64 = bytesInFlight * 80000;
+	rate64 = tcb->m_bytesInFlight.Get() * 80000;
 
 	double tmp = 1.0 / avg_rtt.GetDouble ();
 
-	if(avg_rtt > 0)
+	if(avg_rtt != 0) //changed
 		rate = static_cast<uint32_t>(rate64 * tmp);
 	else
 		rate = rate64;
@@ -252,10 +255,14 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, uint32_
 		m_MinRttNew = avg_rtt;
 
 	
-	if (m_RttStartSeq >= tcb->m_lastAckedSeq) {
+	if (m_RttStartSeq < tcb->m_lastAckedSeq) {
+		
 		m_RttStartSeq = tcb->m_nextTxSequence;
 		if (m_RttCount < 0xff)
+		{	
 			m_RttCount++;
+			std::cout<<"RTT Count: "<<m_RttCount<<"\n";
+		}
 
 		if (m_EvalCallCount == 1 &&
 		    (bytes) >= (m_NvMinCwnd - 1) * tcb->m_segmentSize &&
@@ -265,7 +272,7 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, uint32_
 		     	m_NvMinCwnd = m_NvMinCwnd + m_MinCwndGrow;
 		     else
 		     	m_NvMinCwnd = m_TsoCwndBound + 1;
-            m_RttStartSeq = tcb->m_nextTxSequence +(m_NvMinCwnd * tcb->m_segmentSize);
+            m_RttStartSeq = tcb->m_nextTxSequence + (m_NvMinCwnd * tcb->m_segmentSize);
 			m_EvalCallCount = 0;
 			m_NvAllowCwndGrowth = true;
 			return;
@@ -277,9 +284,11 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, uint32_
 		cwnd_by_slope = static_cast<uint32_t> (m_RttMaxRate * tmp) / (80000 * tcb->m_segmentSize);
 		
 		max_win = cwnd_by_slope + m_Pad;
-      
+      	std::cout<<"Maximum Window: "<<max_win<<"\n";
+      	std::cout<<"segCwnd: "<<segCwnd<<"\n";
 		if (segCwnd > max_win) {
 			if (m_RttCount < m_RttMinCnt) {
+				std::cout<<m_RttCount<<" "<<m_RttMinCnt<<"\n";
 				return;
 			} 
 			else if (tcb->m_ssThresh == tcb->m_initialSsThresh)
@@ -302,6 +311,7 @@ TcpNewVegas::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, uint32_
 			m_NvAllowCwndGrowth = false;
 			tcb->m_ssThresh = (m_SsThreshFactor * max_win) / 8;
 			if (segCwnd - max_win > 2) {
+				// printf("Decreasing cwnd\n");
 				uint32_t dec;
                 if(((segCwnd - max_win)*m_CongDecMult) / 128 > 2 )
                 	dec = ((segCwnd - max_win)*m_CongDecMult) / 128;
@@ -353,6 +363,8 @@ void
 TcpNewVegas::CongestionStateSet (Ptr<TcpSocketState> tcb,
                               const TcpSocketState::TcpCongState_t newState)
 {
+	// NS_LOG_LOGIC ("Congestion State Set");
+	printf("Congestion Set State\n");
 	if (newState == TcpSocketState::CA_OPEN && m_NvReset)
 	{
 		// tcp reset
@@ -379,6 +391,7 @@ TcpNewVegas::CongestionStateSet (Ptr<TcpSocketState> tcb,
 void
 TcpNewVegas::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 {
+	// printf("Increase Window\n");
 	NS_LOG_FUNCTION (this << tcb << segmentsAcked);
 
 	// if (tcb->m_cWnd < tcb->m_ssThresh)
@@ -436,6 +449,8 @@ uint32_t
 TcpNewVegas::GetSsThresh (Ptr<const TcpSocketState> tcb,
                        uint32_t bytesInFlight)
 {
+	NS_LOG_LOGIC ("SS Thresh");
+	printf("SS Thresh\n");
 	uint32_t segCwnd = tcb->GetCwndInSegments ();
 	return (segCwnd*m_LossDecFactor)>>10;
 }
