@@ -8,6 +8,13 @@ TCP-NV(New Vegas) is a major update to TCP-Vegas. Like Vegas, NV is a delay base
 - TCP New Vegas is mainly recommended for traffic within a data center, and when all the flows are NV (at least those within the data center). This is due to the inherent unfairness between flows using losses to detect congestion and those that use queue buildup to detect congestion (congestion avoidance).
 - TCP New Vegas is developed to coexist with modern networks where links bandwidths are 10 Gbps or higher, where the RTTs can be 10’s of microseconds, where interrupt coalescence and TSO/GSO can introduce noise and nonlinear effects, etc.
 
+## Approach
+- Studied Congestion Control, TCP Vegas, TCP New Vegas
+- Documented understanding
+- Reverse engineered NV algorithm from the Linux implementation
+- Implemented in ns3
+- Bug Fixes, documentation 
+
 ## Results
 
 TCP New Vegas vs TCP Vegas (cwnd vs time)
