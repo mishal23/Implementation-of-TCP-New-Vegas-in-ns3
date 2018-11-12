@@ -18,7 +18,7 @@ TCP-NV(New Vegas) is a major update to TCP-Vegas. Like Vegas, NV is a delay base
 ## Results
 
 TCP New Vegas vs TCP Vegas (cwnd vs time)
-<img src="https://srv2.imgonline.com.ua/result_img/imgonline-com-ua-twotoone-n6EMttlWH91G.png" alt="CWND vs Time">
+<img src="https://github.com/mishal23/Implementation-of-TCP-New-Vegas-in-ns3/blob/master/ns3/scratch/plots/vegas-nv.png" alt="CWND vs Time">
 
 View other graphs plotted [here](https://github.com/mishal23/Implementation-of-TCP-New-Vegas-in-ns3/tree/master/ns3/scratch/plots)
 
