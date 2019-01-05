@@ -50,6 +50,16 @@ TcpNewVegas::GetTypeId (void)
                    UintegerValue (2),
                    MakeUintegerAccessor (&TcpNewVegas::m_MinCwnd),
                    MakeUintegerChecker<uint32_t> ())
+    .AddAttribute("m_NvAllowCwndGrowth", "",
+    	           UintegerValue(1),
+    	           MakeUintegerAccessor(&TcpNewVegas::m_NvAllowCwndGrowth),
+    	           MakeUintegerChecker<uint32_t> ())
+    .AddAttribute("m_CwndGrowthFactor", "",
+    	           UintegerValue(0),
+    	           MakeUintegerAccessor(&TcpNewVegas::m_NvCwndGrowthFactor),
+    	           MakeUintegerChecker<uint32_t> ())
+    
+
     
   ;
 
